@@ -52,3 +52,192 @@ URL: http://127.0.0.1:8000/notes/2 - Execution Time: 0.23115801811218262 seconds
 Total Execution Time: 1.3341798782348633 seconds
 
 Process finished with exit code 0
+
+
+output async views: 
+
+
+URL: http://127.0.0.1:8000/notes/ - Execution Time: 0.23202800750732422 seconds
+URL: http://127.0.0.1:8000/notes/1 - Execution Time: 0.015938997268676758 seconds
+URL: http://localhost:8000/notes1/c/<int:category_id>/menu/ - Execution Time: 0.13302397727966309 seconds
+URL: http://localhost:8000/notes1/c/<int:category_id> - Execution Time: 0.011012792587280273 seconds
+URL: http://localhost:8000/notes1/c/<int:category_id>/note/create/ - Execution Time: 0.010522127151489258 seconds
+URL: http://localhost:8000/notes1/c/<int:category_id>/note/<int:note_id>/update/ - Execution Time: 0.010708808898925781 seconds
+URL: http://localhost:8000/notes1/c/<int:category_id>/note/<int:note_id>/delete/ - Execution Time: 0.012392044067382812 seconds
+URL: http://localhost:8000/notes1/c/<int:category_id>/note/<int:note_id> - Execution Time: 0.012027978897094727 seconds
+URL: http://127.0.0.1:8000/notes/2 - Execution Time: 0.1194150447845459 seconds
+Total Execution Time: 0.6283955574035645 seconds
+
+Process finished with exit code 0
+
+
+Висновок: Асинхронний набагато швидше. 
+
+#################
+файл views.py sync - синхронний
+
+
+from django.shortcuts import render,get_object_or_404, redirect
+from django.http import HttpResponse
+from django.views import View
+from .models import Category, Note
+from .forms import NoteForm, CategoryForm
+from django.contrib.auth.decorators import login_required
+
+def home(request): #good
+    notes = Note.objects.all()
+    return render(request, 'notes1/home.html', {'notes':notes})
+
+
+@login_required
+def creator_view(request):
+    user = request.user
+    notes = Note.objects.filter(creator=user)
+    context = {'notes':notes}
+    return render(request, 'notes1/creator_view.html', context)
+
+@login_required
+def note_create(request, category_id):
+    category = get_object_or_404(Category, id=category_id)
+
+    if request.method == 'POST':
+        form = NoteForm(request.POST)
+        if form.is_valid():
+            note = form.save(commit=False)
+            note.category = category
+            note.save()
+            return redirect('notes1:category_detail', category_id=category.id)
+    else:
+        form = NoteForm()
+
+    return render(request, 'notes1/note_create.html', {'form': form, 'category': category})
+
+
+
+@login_required
+def note_update(request, category_id, note_id):
+    category = get_object_or_404(Category, id=category_id)
+    note = get_object_or_404(Note, id=note_id)
+
+    if request.method == 'POST':
+        form = NoteForm(request.POST, instance=note)
+        if form.is_valid():
+            form.save()
+            #return redirect(note.get_absolute_url())
+            return redirect('notes1:category_detail', category_id=category.id)
+    else:
+        form = NoteForm(instance=note)
+
+    return render(request, 'notes1/note_update.html', {'form': form, 'category': category, 'note': note})
+
+
+@login_required
+def note_delete(request, category_id, note_id):
+    note = get_object_or_404(Note, id=note_id)
+    note.delete()
+    return redirect('notes1:category_detail', category_id=category_id)
+
+@login_required
+def category_detail(request, category_id):
+    category = get_object_or_404(Category, id=category_id)
+    user = request.user
+    notes = Note.objects.filter(category=category,creator=user)
+
+    return render(request, 'notes1/category_detail.html', {'category': category, 'notes': notes})
+
+@login_required
+def note_detail(request, category_id, note_id):
+    note = get_object_or_404(Note, id=note_id)
+
+    return render(request, 'notes1/note_detail.html', {'note': note})
+
+def navigation(request, category_id):
+    return render(request, 'notes1/navi.html', {'category_id': category_id})
+
+def category_index(request):
+    category_list = Category.objects.all()
+    return render(request, "notes1/category_list.html", {"category_list": category_list})
+###########################
+
+файл views.py асинхронний 
+
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.http import HttpResponse
+from django.views import View
+from .models import Category, Note
+from .forms import NoteForm, CategoryForm
+from django.contrib.auth.decorators import login_required
+from asgiref.sync import sync_to_async
+
+
+async def home(request): #good
+    notes = await sync_to_async(Note.objects.all)()
+    return await sync_to_async(render)(request, 'notes1/home.html', {'notes':notes})
+
+
+@login_required
+async def creator_view(request):
+    user = request.user
+    notes = await sync_to_async(Note.objects.filter)(creator=user)
+    context = {'notes': notes}
+    return await sync_to_async(render)(request, 'notes1/creator_view.html', context)
+
+@login_required
+async def note_create(request, category_id):
+    category = await sync_to_async(get_object_or_404)(Category, id=category_id)
+
+    if request.method == 'POST':
+        form = NoteForm(request.POST)
+        if form.is_valid():
+            note = await sync_to_async(form.save)(commit=False)
+            note.category = category
+            await sync_to_async(note.save)()
+            return redirect('notes1:category_detail', category_id=category.id)
+    else:
+        form = NoteForm()
+
+    return await sync_to_async(render)(request, 'notes1/note_create.html', {'form': form, 'category': category})
+
+@login_required
+async def note_update(request, category_id, note_id):
+    category = await sync_to_async(get_object_or_404)(Category, id=category_id)
+    note = await sync_to_async(get_object_or_404)(Note, id=note_id)
+
+    if request.method == 'POST':
+        form = NoteForm(request.POST, instance=note)
+        if form.is_valid():
+            await sync_to_async(form.save)()
+            return redirect('notes1:category_detail', category_id=category.id)
+    else:
+        form = NoteForm(instance=note)
+
+    return await sync_to_async(render)(request, 'notes1/note_update.html', {'form': form, 'category': category, 'note': note})
+
+@login_required
+async def note_delete(request, category_id, note_id):
+    note = await sync_to_async(get_object_or_404)(Note, id=note_id)
+    await sync_to_async(note.delete)()
+    return redirect('notes1:category_detail', category_id=category_id)
+
+@login_required
+async def category_detail(request, category_id):
+    category = await sync_to_async(get_object_or_404)(Category, id=category_id)
+    user = request.user
+    notes = await sync_to_async(Note.objects.filter)(category=category, creator=user)
+
+    return await sync_to_async(render)(request, 'notes1/category_detail.html', {'category': category, 'notes': notes})
+
+@login_required
+async def note_detail(request, category_id, note_id):
+    note = await sync_to_async(get_object_or_404)(Note, id=note_id)
+
+    return await sync_to_async(render)(request, 'notes1/note_detail.html', {'note': note})
+
+async def navigation(request, category_id):
+    return await sync_to_async(render)(request, 'notes1/navi.html', {'category_id': category_id})
+
+async def category_index(request):
+    category_list = await sync_to_async(Category.objects.all)()
+    return await sync_to_async(render)(request, "notes1/category_list.html", {"category_list": category_list})
+
