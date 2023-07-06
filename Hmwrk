@@ -1,0 +1,54 @@
+1.Виміряти швидкість роботи твоїх views, виконавши послідовні виклики різних ендпоінтів.
+Виміряти швидкість роботи кожного view окремо, а також сумарну кількість секунд, витрачену на всі запити. Використай HTTPX, Requests або Postman для тесту. 
+
+file view_tests.py 
+
+
+
+import time
+import requests
+
+# URLs Django views
+urls = [
+    "http://127.0.0.1:8000/notes/",  #  home view
+    "http://127.0.0.1:8000/notes/1",  # index
+    "http://localhost:8000/notes1/c/<int:category_id>/menu/", #navigation
+    "http://localhost:8000/notes1/c/<int:category_id>", #cat detail
+    "http://localhost:8000/notes1/c/<int:category_id>/note/create/", #notecreate
+    "http://localhost:8000/notes1/c/<int:category_id>/note/<int:note_id>/update/",
+    "http://localhost:8000/notes1/c/<int:category_id>/note/<int:note_id>/delete/",
+    "http://localhost:8000/notes1/c/<int:category_id>/note/<int:note_id>",
+    "http://127.0.0.1:8000/notes/2",
+
+
+    
+]
+
+
+# Measure the execution time for each URL
+for url in urls:
+    start_time = time.time()
+    response = requests.get(url)
+    end_time = time.time()
+    execution_time = end_time - start_time
+    total_execution_time += execution_time
+    print(f"URL: {url} - Execution Time: {execution_time} seconds")
+
+print(f"Total Execution Time: {total_execution_time} seconds")
+
+
+
+output: синхронні views: 
+
+URL: http://127.0.0.1:8000/notes/ - Execution Time: 0.5860621929168701 seconds
+URL: http://127.0.0.1:8000/notes/1 - Execution Time: 0.04326510429382324 seconds
+URL: http://localhost:8000/notes1/c/<int:category_id>/menu/ - Execution Time: 0.41309189796447754 seconds
+URL: http://localhost:8000/notes1/c/<int:category_id> - Execution Time: 0.011267900466918945 seconds
+URL: http://localhost:8000/notes1/c/<int:category_id>/note/create/ - Execution Time: 0.011984109878540039 seconds
+URL: http://localhost:8000/notes1/c/<int:category_id>/note/<int:note_id>/update/ - Execution Time: 0.011757850646972656 seconds
+URL: http://localhost:8000/notes1/c/<int:category_id>/note/<int:note_id>/delete/ - Execution Time: 0.013670921325683594 seconds
+URL: http://localhost:8000/notes1/c/<int:category_id>/note/<int:note_id> - Execution Time: 0.011921882629394531 seconds
+URL: http://127.0.0.1:8000/notes/2 - Execution Time: 0.23115801811218262 seconds
+Total Execution Time: 1.3341798782348633 seconds
+
+Process finished with exit code 0
